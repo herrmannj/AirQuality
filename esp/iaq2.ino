@@ -1,5 +1,5 @@
 // uncomment for Serial debugging statements
-// #define DEBUG_SERIAL 
+#define DEBUG_SERIAL 
 
 #ifdef DEBUG_SERIAL
 #define DEBUG_BEGIN Serial.begin(115200)
@@ -64,12 +64,14 @@ char message[512];
 unsigned long prevLedMillis   = millis(); // counter main loop for signaling led
 unsigned long prevDhtMillis   = millis(); // counter main loop for dht
 unsigned long prevIaqMillis   = millis(); // counter main loop for iaq
-unsigned long prevMhz19Millis = millis(); // counter main loop for iaq
+unsigned long prevMhz19Millis = millis(); // counter main loop for MH-Z19
+unsigned long prevLdrMillis   = millis(); // counter main loop for LDR
 unsigned long sigLedOn        = 50;       // ms for led on
 unsigned long sigLedOff       = 450;      // ms for led off
 unsigned long intervalDht     = 10000;    // default
 unsigned long intervalIaq     = 10000;    // default
 unsigned long intervalMhz19   = 10000;    // default
+unsigned long intervalLdr     = 1000;    // default
 unsigned long intervalLed     = 0;        // 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,6 +86,7 @@ class AIQDisplay: public SSD1306Wire {
     uint16_t _eco2 = 450;
     uint16_t _etvoc = 125;
     uint16_t _co2 = 400;
+    uint16_t _lux = 0;
     bool _update = true;
     
   public:
@@ -116,6 +119,11 @@ class AIQDisplay: public SSD1306Wire {
       _update = true;
     };
 
+    void setLux(uint16_t lux) {
+      _lux = lux;
+      _update = true;
+    };
+
     void showSummary() {
       if (!_update) return;
       _update = false;
@@ -140,7 +148,9 @@ class AIQDisplay: public SSD1306Wire {
       sprintf(line, "CO2: %d%s", _co2, "ppm");
       drawStr(64, 26, line);
       // TVOC
-      sprintf(line, "VOC: %d%s", _etvoc, "ppm");
+      //sprintf(line, "VOC: %d%s", _etvoc, "ppm");
+      //drawStr(64, 38, line);
+      sprintf(line, "BR: %d%s", _lux, "lux");
       drawStr(64, 38, line);
       display();
       DEBUG_PRINT("display update");
@@ -238,6 +248,17 @@ void getMhz19Readings() {
   };
 };
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// LDR (NodeMCU A0)
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+char ldrMsg[32];
+
+void getLdrReadings() {
+  uint16_t lux = analogRead (A0);
+  display.setLux(lux);
+  sprintf(mhz19Msg, "F:BR;C:%u;", lux);
+};
 ////////////////////////////////////////////////
 
 void prepareMessage(char* payload ) {
@@ -289,12 +310,13 @@ void setup() {
   serviceMessageTimer.attach(60, serviceAlive);
 
   iaqcore.begin();
-  prevIaqMillis = millis() - intervalIaq + 500;  // first Iaq reading 1 sec after startup
+  prevIaqMillis = millis() - intervalIaq + 500;  // first Iaq reading 500 msec after startup
   
   // temp/hum
   dht.begin();
   prevDhtMillis = millis() - intervalDht + 1000;  // first Dht reading 1 sec after startup
-
+  // LDR
+  prevLdrMillis = millis() - intervalLdr + 200;  // first LDR reading 200 msec after startup
 };
 
 void loop() {
@@ -329,6 +351,11 @@ void loop() {
   if (currentMillis - prevMhz19Millis > intervalMhz19) {
     prevMhz19Millis = currentMillis;
     getMhz19Readings();
+  };
+
+  if (currentMillis - prevLdrMillis > intervalLdr) {
+    prevLdrMillis = currentMillis;
+    getLdrReadings();
   };
   
   // incoming udp msg
