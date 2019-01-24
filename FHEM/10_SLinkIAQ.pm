@@ -1,5 +1,5 @@
 ###############################################################################
-# $Id: 00_SLinkIAQ.pm  $
+# $Id: 10_SLinkIAQC.pm  $
 #
 # this module is part of fhem under the same license
 # copyright 2019, joerg herrmann

@@ -1,5 +1,5 @@
 // uncomment for Serial debugging statements
-#define DEBUG_SERIAL 
+// #define DEBUG_SERIAL 
 
 #ifdef DEBUG_SERIAL
 #define DEBUG_BEGIN Serial.begin(115200)
@@ -148,10 +148,10 @@ class AIQDisplay: public SSD1306Wire {
       sprintf(line, "CO2: %d%s", _co2, "ppm");
       drawStr(64, 26, line);
       // TVOC
-      //sprintf(line, "VOC: %d%s", _etvoc, "ppm");
-      //drawStr(64, 38, line);
-      sprintf(line, "BR: %d%s", _lux, "lux");
+      sprintf(line, "VOC: %d%s", _etvoc, "ppm");
       drawStr(64, 38, line);
+      //sprintf(line, "BR: %d%s", _lux, "lux");
+      //drawStr(64, 38, line);
       display();
       DEBUG_PRINT("display update");
     };
@@ -257,12 +257,13 @@ char ldrMsg[32];
 void getLdrReadings() {
   uint16_t lux = analogRead (A0);
   display.setLux(lux);
-  sprintf(mhz19Msg, "F:BR;C:%u;", lux);
+  sprintf(mhz19Msg, "F:BR;B:%u;", lux);
 };
 ////////////////////////////////////////////////
 
 void prepareMessage(char* payload ) {
-  sprintf( message, "T:IAQC;FW:1.0;ID:%06X;IP:%s;R:%ld;%s", ESP.getChipId(), WiFi.localIP().toString().c_str(), WiFi.RSSI(), payload );
+  //sprintf(message, "T:IAQC;FW:1.0;ID:%06X;IP:%s;R:%ld;%s", ESP.getChipId(), WiFi.localIP().toString().c_str(), WiFi.RSSI(), payload);
+  Serial.println(message);
 };
 
 void setup() {

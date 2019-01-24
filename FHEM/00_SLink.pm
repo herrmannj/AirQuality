@@ -16,20 +16,21 @@ use utf8;
 use Socket qw( inet_pton inet_ntop sockaddr_in AF_INET INADDR_ANY IP_ADD_MEMBERSHIP IP_DROP_MEMBERSHIP );
 use Time::HiRes qw(time);
 
+our $deb = 1;
+
 sub SLink_Initialize {
   my ($hash) = @_;
 
-  $hash->{Clients}        = "SLink:SLinkS0";
+  $hash->{Clients}        = "SLink:SLinkIAQC:SLinkS0:";
 
-  $hash->{MatchList}      = { "0:SLink"       => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:SERVICE[^;]*.*$',
-                              "1:SLinkS0"     => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:S0[^;]*.*$',
-                              "2:SLinkTH"     => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:TH[^;]*.*$',
-                              "3:SLinkIAQ"    => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:IAQ[^;]*.*$',
+  $hash->{MatchList}      = { "0:SLink"       => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:SERVICE[^;]*.*$', 
+                              "10:SLinkIAQC"  => '^T:IAQC;FW:[^;]*;ID:[^;]*;.*$',
+                              "20:SLinkS0"    => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:S0[^;]*.*$',
+                              #"21:SLinkTH"    => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:TH[^;]*.*$',
+                              "11:SLinkIAQ"   => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:IAQ[^;]*.*$',
                             };
 
-  #$hash->{AutoCreate}     = { 'SLinkS0.*' => {'FILTER'  => '%NAME:meter.*'}};
-
-  # we receive service msg
+  # we receive our own service msg
   $hash->{Match}          = '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:SERVICE[^;]*.*$';
 
   $hash->{DefFn}          = "SLink_Define";
@@ -59,6 +60,7 @@ sub SLink_Define {
   } or do {
     return "invalid ip: $ip";
   };
+  #$hash->{'.clientArray'} = [qw( SLink SLinkIAQC SLinkS0 SLinkTH )];
   notifyRegexpChanged($hash, 'global');
 	SLink_Run($hash) if ($init_done);
   return undef;
@@ -108,7 +110,8 @@ sub SLink_Shutdown {
   delete $selectlist{$shash->{'NAME'}};
   return unless ($socket = $shash->{'FH'});
   my $ip_level = getprotobyname('IP');
-  my $ip_mreq = inet_pton(AF_INET, '239.255.255.250') . INADDR_ANY;
+  my $mcaddr = $hash->{'helper'}->{'mcaddr'};
+  my $ip_mreq = inet_pton(AF_INET, '239.255.255.250') . $mcaddr;
   setsockopt ($socket, $ip_level, IP_DROP_MEMBERSHIP, $ip_mreq);
   close($socket) if $socket;
   return undef;
@@ -174,7 +177,7 @@ sub SLink_Receive {
   Log3 ($shash->{PARENT}, 5 , sprintf("SLink Service received from %s:%s packet %s", $herstraddr, $port, $msg));
   if (my ($type, $fw, $id, $ip, $rssi, $fn) = $msg =~ m/^T:([^;]*);FW:([^;]*);ID:([^;]*);IP:([^;]*);R:([^;]*);F:([^;]*).*\n$/gm) {  
     $msg =~ s/[\r\n]+$//gm;
-    $modules{'SLinkS0'}{'sensor'}{$id} = $ip;
+    #$modules{'SLinkS0'}{'sensor'}{$id} = $ip;
     my $parent = $shash->{PARENT};
     my $hash = $defs{$parent};
     my $addvals = {
@@ -182,7 +185,9 @@ sub SLink_Receive {
       'RSSI'      =>  $rssi,
       'REMOTE'    =>  $herstraddr,
     };
-    Dispatch($hash, $msg, $addvals);
+    # we need to find a better solution for sensors under construction. 
+    my $noUnknown = 0; 
+    Dispatch($hash, $msg, $addvals, $noUnknown);
   } else {
     $msg =~ s/[^\w;:,.-]/\?/;
     #Log3 ($shash->{PARENT}, 1 , sprintf("SLink Service received %s %s invalid packet %s", $port, $herstraddr, $msg));
