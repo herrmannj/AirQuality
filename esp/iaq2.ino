@@ -262,7 +262,7 @@ void getLdrReadings() {
 ////////////////////////////////////////////////
 
 void prepareMessage(char* payload ) {
-  //sprintf(message, "T:IAQC;FW:1.0;ID:%06X;IP:%s;R:%ld;%s", ESP.getChipId(), WiFi.localIP().toString().c_str(), WiFi.RSSI(), payload);
+  sprintf(message, "T:IAQC;FW:1.0;ID:%06X;IP:%s;R:%ld;%s", ESP.getChipId(), WiFi.localIP().toString().c_str(), WiFi.RSSI(), payload);
   Serial.println(message);
 };
 
