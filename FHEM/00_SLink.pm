@@ -27,7 +27,7 @@ sub SLink_Initialize {
                               "10:SLinkIAQC"  => '^T:IAQC;FW:[^;]*;ID:[^;]*;.*$',
                               "20:SLinkS0"    => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:S0[^;]*.*$',
                               #"21:SLinkTH"    => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:TH[^;]*.*$',
-                              "11:SLinkIAQ"   => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:IAQ[^;]*.*$',
+                              #"21:SLinkIAQ"   => '^T:[^;]*;FW:[^;]*;ID:[^;]*;IP:[^;]*;R:[^;]*;F:IAQ[^;]*.*$',
                             };
 
   # we receive our own service msg

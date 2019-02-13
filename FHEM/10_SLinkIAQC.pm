@@ -103,23 +103,44 @@ sub SLinkIAQC_Message {
       readingsBeginUpdate($hash);
       readingsBulkUpdate($hash, 'brightness', $brightness);
       readingsEndUpdate($hash, 1);
-    } elsif (my ($eco2, $tvoc, $res) = $msg =~ m/^F:IAQ;C:([^;]*);V:([^;]*);R:([^;]*);$/gm) {
+    };
+    if (my ($eco2, $tvoc, $res) = $msg =~ m/^F:IAQ;C:([^;]*);V:([^;]*);R:([^;]*);$/gm) {
       readingsBeginUpdate($hash);
       #readingsBulkUpdate($hash, 'state', "c: $co2 t: $tvoc r: $res");
-      readingsBulkUpdate($hash, 'tvoc', $tvoc);
+      readingsBulkUpdate($hash, 'IAQ_tvoc', $tvoc);
       #readingsBulkUpdate($hash, 'res', $res);
       readingsEndUpdate($hash, 1);
-    } elsif (my ($co2) = $msg =~ m/^F:CO2;C:([^;]*);$/gm) {
+    };
+    if (my ($co2) = $msg =~ m/^F:CO2;C:([^;]*);$/gm) {
       readingsBeginUpdate($hash);
       #readingsBulkUpdate($hash, 'state', "c: $co2 t: $tvoc r: $res");
-      readingsBulkUpdate($hash, 'co2', $co2);
+      readingsBulkUpdate($hash, 'MHZ_co2', $co2);
       #readingsBulkUpdate($hash, 'res', $res);
       readingsEndUpdate($hash, 1);
-    } elsif (my ($t, $rh) = $msg =~ m/^F:TH_A;T:([^;]*);H:([^;]*);$/gm) {
+    };
+    if (my ($t, $rh, $ah, $dp, $p) = $msg =~ m/^F:THP;T:([^;]*);H:([^;]*);AH:([^;]*);D:([^;]*);P:([^;]*);$/gm) { #BME280
       readingsBeginUpdate($hash);
       #readingsBulkUpdate($hash, 'state', "c: $co2 t: $tvoc r: $res");
-      readingsBulkUpdate($hash, 'temperature', $t);
-      readingsBulkUpdate($hash, 'rh', $rh);
+      readingsBulkUpdate($hash, 'BME280_temperature', $t);
+      readingsBulkUpdate($hash, 'BME280_rH', $rh);
+      readingsBulkUpdate($hash, 'BME280_aH', $ah);
+      readingsBulkUpdate($hash, 'BME280_dewpoint', $dp);
+      readingsBulkUpdate($hash, 'BME280_pressure', $p);
+      readingsEndUpdate($hash, 1);
+    };
+    if (my ($t, $rh, $ah, $dp, $p, $tvoc, $r, $dbg_baseC, $dbg_filtered, $dbg_ratio) = $msg =~ m/^F:THPV;T:([^;]*);H:([^;]*);AH:([^;]*);D:([^;]*);P:([^;]*);V:([^;]*);R:([^;]*);DB:([^;]*);DF:([^;]*);DR:([^;]*);$/gm) { #BME680
+      readingsBeginUpdate($hash);
+      #readingsBulkUpdate($hash, 'state', "c: $co2 t: $tvoc r: $res");
+      readingsBulkUpdate($hash, 'BME680_temperature', $t);
+      readingsBulkUpdate($hash, 'BME680_rH', $rh);
+      readingsBulkUpdate($hash, 'BME680_aH', $ah);
+      readingsBulkUpdate($hash, 'BME680_dewpoint', $dp);
+      readingsBulkUpdate($hash, 'BME680_pressure', $p);
+      readingsBulkUpdate($hash, 'BME680_tvoc', $tvoc);
+      readingsBulkUpdate($hash, 'BME680_DBG_R', $r);
+      readingsBulkUpdate($hash, 'BME680_DBG_BASE_C', $dbg_baseC);
+      readingsBulkUpdate($hash, 'BME680_DBG_FILTERED', $dbg_filtered);
+      readingsBulkUpdate($hash, 'BME680_DBG_RATIO', $dbg_ratio);
       readingsEndUpdate($hash, 1);
     };
   };
