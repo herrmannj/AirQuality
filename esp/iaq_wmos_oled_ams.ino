@@ -48,7 +48,7 @@ char packetOut[512];                      // UPD out-buffer
 struct { 
   float t_offset = -.5;                   // offset temperature sensor
   float h_offset = 1.5;                   // offset humitidy sensor
-  uint32_t vocBaseR = 108000;             // base value for VOC resistance clean air, abc 
+  uint32_t vocBaseR = 0;                  // base value for VOC resistance clean air, abc 
   uint32_t vocBaseC = 0;                  // base value for VOC resistance clean air, abc  
   float vocHum = 0;                       // reserved, abc
   uint32_t signature = 0x49415143;        // 'IAQC'
@@ -101,6 +101,8 @@ Adafruit_BME680 bme680; // BME680 sensor object
 unsigned long prevBme680Millis  = millis(); // counter main loop for BME 680
 unsigned long intervalBme680    = 10000;    // 10 sec update interval default
 float resFiltered;                          // low pass
+float aF = 0;
+float tVoc = 0;
 bool bme680VocValid = false;                // true if filter is initialized, ramp-up after start
 char bme680Msg[128];                        // payload
 
@@ -113,6 +115,7 @@ void getBme680Readings() {
   float t = bme680.temperature + param.t_offset;
   float h = bme680.humidity + param.h_offset;
   float a = absHum(t, h);
+  aF = (aF == 0 || a < aF)?a:aF + 0.2 * (a - aF);
   float d = dewPoint(t, h);
   float p = bme680.pressure /100.0F;
   uint32_t r = bme680.gas_resistance; // raw R VOC
@@ -124,8 +127,10 @@ void getBme680Readings() {
   };
   if (!bme680VocValid ) return;
   resFiltered += 0.1 * (r - resFiltered);
-  float ratio = (float)base / (resFiltered * a * 7.0F);
-  float tVoc = (1250 * log(ratio)) + 125; // approximation
+  //float ratio = (float)base / (resFiltered * a * 7.0F); // filter removed
+  float ratio = (float)base / (r * aF * 7.0F);
+  float tV = (1250 * log(ratio)) + 125; // approximation
+  tVoc = (tVoc == 0)?tV:tVoc + 0.1 * (tV - tVoc);
   char str_temp[6];
   char str_hum[6];
   char str_absHum[6];
@@ -153,16 +158,22 @@ void getBme680Readings() {
 };
 
 // automatic baseline correction
-uint32_t bme680_baseC = 0;                  // highest r (lowest voc) in current time period
+uint32_t bme680_baseC = 0;                  // highest adjusted r (lowest voc) in current time period
 float bme680_baseH = 0;                     // abs hum (g/m3)
 unsigned long prevBme680AbcMillis = 0;      // ts of last save to nv 
 unsigned long intervalBme680NV = 604800000; // 7 days of ms
+uint8_t bDelay = 0;                         // stable new baseline counter (avoid short-term noise)
 
 uint32_t bme680Abc(uint32_t r, float a) {   // automatic baseline correction
   uint32_t b = r * a * 7.0F;
-  if (b > bme680_baseC) {
+  if (b > bme680_baseC && bDelay > 5) {     // ensure that new baseC is stable for at least >5*10sec (clean air)
     bme680_baseC = b;
     bme680_baseH = a;
+  } else if (b > bme680_baseC) {
+    bDelay++;
+    //return b;
+  } else {
+    bDelay = 0;
   };
 
   // store baseline to nv
